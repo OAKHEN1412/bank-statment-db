@@ -1,0 +1,19 @@
+from parsers import bbl, kbank, ktb, scb, ttb
+
+PARSERS = {
+    'BBL':   bbl,
+    'KBANK': kbank,
+    'KTB':   ktb,
+    'SCB':   scb,
+    'TTB':   ttb,
+}
+
+
+def parse_pdf(bank, filepath):
+    parser = PARSERS.get(bank.upper())
+    if not parser:
+        raise ValueError(f'ไม่รองรับธนาคาร: {bank}')
+    try:
+        return parser.parse(filepath)
+    except Exception as e:
+        raise ValueError(f'ไม่สามารถเปิดไฟล์ PDF ได้: {e}') from e

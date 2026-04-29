@@ -1,0 +1,21 @@
+# Database (user data — not pushed)
+bank_statements.db
+
+# Uploaded PDFs (temp files)
+uploads/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment
+.env
+
+# Test files
+test_ocr.py
+
+# OS
+.DS_Store
+Thumbs.db

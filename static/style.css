@@ -1,0 +1,60 @@
+body {
+  background: #f5f7fa;
+  font-family: 'Segoe UI', Sarabun, sans-serif;
+}
+
+/* Bank badge colours */
+.bank-badge-BBL   { background: #003087; color: #fff; }
+.bank-badge-KBANK { background: #00ab44; color: #fff; }
+.bank-badge-KTB   { background: #009a44; color: #fff; }
+.bank-badge-SCB   { background: #4b0082; color: #fff; }
+.bank-badge-TTB   { background: #e3000f; color: #fff; }
+
+.bank-badge-BBL, .bank-badge-KBANK, .bank-badge-KTB,
+.bank-badge-SCB,  .bank-badge-TTB {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: .8rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+
+/* Table rows */
+.row-debit  { background: #fff5f5; }
+.row-credit { background: #f5fff8; }
+
+/* Description cell — truncate long text */
+.desc-cell {
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: .85rem;
+}
+
+/* Cards */
+.card { border-radius: .75rem; }
+.card-header { border-radius: .75rem .75rem 0 0 !important; font-weight: 600; }
+
+/* Sticky thead */
+thead.sticky-top th { top: 0; z-index: 2; }
+
+/* Navbar brand */
+.navbar-brand { font-size: 1.1rem; letter-spacing: .02em; }
+
+/* Upload bank button toggle */
+.bank-btn label { cursor: pointer; font-weight: 600; min-width: 70px; text-align: center; }
+.bank-btn label.active { font-weight: 700; }
+
+/* Alert */
+.alert { border-radius: .6rem; }
+
+/* Check page row colours */
+.row-matched   { background: #f0fff4; }
+.row-partial   { background: #fffbf0; }
+.row-not-found { background: #fff5f5; }
+.row-noparse   { background: #f8f9fa; }
+
+.note-row td { border-top: none !important; font-size: .78rem; }
+.check-header { background: #343a40 !important; }

@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block title %}อัปโหลด PDF — Bank Statement DB{% endblock %}
+
+{% block content %}
+<div class="row g-4">
+
+  <!-- Upload Card -->
+  <div class="col-lg-5">
+    <div class="card shadow-sm border-0 h-100">
+      <div class="card-header bg-primary text-white">
+        <i class="bi bi-cloud-upload me-2"></i>อัปโหลด PDF ใบแจ้งยอดธนาคาร
+      </div>
+      <div class="card-body">
+        <form action="{{ url_for('upload') }}" method="post" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label class="form-label fw-semibold">เลือกธนาคาร</label>
+            <div class="d-flex flex-wrap gap-2">
+              {% for b in banks %}
+              <div class="form-check bank-btn">
+                <input class="form-check-input visually-hidden" type="radio" name="bank"
+                       id="bank_{{ b }}" value="{{ b }}" required>
+                <label class="form-check-label btn btn-outline-primary px-3 py-2" for="bank_{{ b }}">
+                  {{ b }}
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="pdf_file" class="form-label fw-semibold">ไฟล์ PDF</label>
+            <input type="file" class="form-control" id="pdf_file" name="pdf_files"
+                   accept=".pdf" multiple required>
+            <div class="form-text">เลือกได้หลายไฟล์พร้อมกัน — รองรับเฉพาะ PDF ที่มี text layer</div>
+          </div>
+          <button type="submit" class="btn btn-primary w-100">
+            <i class="bi bi-upload me-1"></i>อัปโหลดและบันทึกลง DB
+          </button>
+        </form>
+
+        <!-- Bank format info -->
+        <div class="mt-4">
+          <p class="text-muted small mb-2"><i class="bi bi-info-circle me-1"></i>รูปแบบที่รองรับ:</p>
+          <ul class="list-unstyled small text-muted ps-2">
+            <li><span class="badge bg-primary me-1">BBL</span>Transaction Report (English)</li>
+            <li><span class="badge bg-success me-1">KBANK</span>ใบแจ้งยอด K BANK (Thai, DD-MM-YY)</li>
+            <li><span class="badge bg-info me-1">KTB</span>Account Statement (English, Teller code)</li>
+            <li><span class="badge bg-warning text-dark me-1">SCB</span>Statement of Saving Account (Thai, X1/X2)</li>
+            <li><span class="badge bg-danger me-1">TTB</span>รายการเคลื่อนไหว TTB (Thai, DD.MM.YYYY)</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Summary Card -->
+  <div class="col-lg-7">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-success text-white">
+        <i class="bi bi-bar-chart me-2"></i>สรุปข้อมูลที่บันทึกแล้ว
+      </div>
+      <div class="card-body p-0">
+        {% if summary %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>ธนาคาร</th>
+                <th class="text-end">รายการ</th>
+                <th class="text-end">รับเข้า (฿)</th>
+                <th class="text-end">โอนออก (฿)</th>
+                <th>ช่วงวันที่</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for s in summary %}
+              <tr>
+                <td><span class="badge bank-badge-{{ s.bank }}">{{ s.bank }}</span></td>
+                <td class="text-end">{{ '{:,}'.format(s.total) }}</td>
+                <td class="text-end text-success">{{ '{:,.2f}'.format(s.total_credit or 0) }}</td>
+                <td class="text-end text-danger">{{ '{:,.2f}'.format(s.total_debit or 0) }}</td>
+                <td class="small text-muted">{{ s.min_date }} — {{ s.max_date }}</td>
+                <td>
+                  <div class="d-flex gap-1">
+                    <a href="{{ url_for('view', bank=s.bank) }}" class="btn btn-sm btn-outline-primary">
+                      <i class="bi bi-eye"></i>
+                    </a>
+                    <form action="{{ url_for('delete_bank_route') }}" method="post"
+                          onsubmit="return confirm('ลบข้อมูลธนาคาร {{ s.bank }} ทั้งหมด?')">
+                      <input type="hidden" name="bank" value="{{ s.bank }}">
+                      <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                    </form>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-5">
+          <i class="bi bi-inbox display-4 d-block mb-2"></i>
+          ยังไม่มีข้อมูล — อัปโหลด PDF เพื่อเริ่มต้น
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Import Logs -->
+    {% if logs %}
+    <div class="card shadow-sm border-0 mt-3">
+      <div class="card-header bg-secondary text-white py-2">
+        <i class="bi bi-clock-history me-2"></i>ประวัติการนำเข้า (ล่าสุด 10 รายการ)
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table table-sm mb-0 small">
+            <thead class="table-light">
+              <tr>
+                <th>ธนาคาร</th>
+                <th>ไฟล์</th>
+                <th class="text-end">รายการ</th>
+                <th>เวลา</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for lg in logs[:10] %}
+              <tr>
+                <td><span class="badge bank-badge-{{ lg.bank }}">{{ lg.bank }}</span></td>
+                <td class="text-truncate" style="max-width:200px" title="{{ lg.filename }}">{{ lg.filename }}</td>
+                <td class="text-end">{{ lg.row_count }}</td>
+                <td class="text-muted">{{ lg.created_at[:16] }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Toggle bank radio buttons as toggle buttons
+document.querySelectorAll('.bank-btn input').forEach(inp => {
+  inp.addEventListener('change', () => {
+    document.querySelectorAll('.bank-btn label').forEach(l => l.classList.remove('active', 'btn-primary'));
+    document.querySelectorAll('.bank-btn label').forEach(l => l.classList.add('btn-outline-primary'));
+    if (inp.checked) {
+      const lbl = inp.nextElementSibling;
+      lbl.classList.add('active', 'btn-primary');
+      lbl.classList.remove('btn-outline-primary');
+    }
+  });
+});
+</script>
+{% endblock %}

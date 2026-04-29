@@ -1,0 +1,157 @@
+{% extends 'base.html' %}
+{% block title %}ดูข้อมูล — Bank Statement DB{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="card shadow-sm border-0 mb-3">
+  <div class="card-body py-2">
+    <form method="get" action="{{ url_for('view') }}" class="row g-2 align-items-end">
+      <div class="col-auto">
+        <label class="form-label small mb-1">ธนาคาร</label>
+        <select name="bank" class="form-select form-select-sm" style="min-width:110px">
+          <option value="">ทั้งหมด</option>
+          {% for b in banks %}
+          <option value="{{ b }}" {% if b == bank %}selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">ตั้งแต่วันที่</label>
+        <input type="date" name="date_from" class="form-control form-control-sm" value="{{ date_from }}">
+      </div>
+      <div class="col-auto">
+        <label class="form-label small mb-1">ถึงวันที่</label>
+        <input type="date" name="date_to" class="form-control form-control-sm" value="{{ date_to }}">
+      </div>
+      <div class="col-auto">
+        <button type="submit" class="btn btn-primary btn-sm">
+          <i class="bi bi-funnel me-1"></i>กรอง
+        </button>
+        <a href="{{ url_for('view') }}" class="btn btn-outline-secondary btn-sm ms-1">ล้าง</a>
+      </div>
+      <div class="col-auto ms-auto text-muted small">
+        แสดง {{ transactions|length }} จาก <strong>{{ total }}</strong> รายการ
+        (หน้า {{ page }}/{{ total_pages }})
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Transactions Table -->
+<div class="card shadow-sm border-0">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover table-sm align-middle mb-0" id="txTable">
+        <thead class="table-dark sticky-top">
+          <tr>
+            <th>#</th>
+            <th>ธนาคาร</th>
+            <th>วันที่</th>
+            <th>เวลา</th>
+            <th>รายการ</th>
+            <th class="text-end">โอนออก (฿)</th>
+            <th class="text-end">รับเข้า (฿)</th>
+            <th class="text-end">ยอดคงเหลือ (฿)</th>
+            <th>ไฟล์ต้นฉบับ</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if transactions %}
+            {% set offset = (page - 1) * per_page %}
+            {% for tx in transactions %}
+            <tr class="{% if tx.debit > 0 %}row-debit{% elif tx.credit > 0 %}row-credit{% endif %}">
+              <td class="text-muted small">{{ offset + loop.index }}</td>
+              <td><span class="badge bank-badge-{{ tx.bank }}">{{ tx.bank }}</span></td>
+              <td class="text-nowrap">{{ tx.date }}</td>
+              <td class="text-nowrap text-muted small">{{ tx.time or '—' }}</td>
+              <td class="desc-cell" title="{{ tx.description }}">{{ tx.description or '—' }}</td>
+              <td class="text-end text-danger fw-semibold">
+                {% if tx.debit and tx.debit > 0 %}
+                  {{ '{:,.2f}'.format(tx.debit) }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-end text-success fw-semibold">
+                {% if tx.credit and tx.credit > 0 %}
+                  {{ '{:,.2f}'.format(tx.credit) }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-end">
+                {% if tx.balance is not none %}
+                  {{ '{:,.2f}'.format(tx.balance) }}
+                {% else %}—{% endif %}
+              </td>
+              <td class="text-muted small text-truncate" style="max-width:140px"
+                  title="{{ tx.source_file }}">{{ tx.source_file or '—' }}</td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="9" class="text-center text-muted py-5">
+                <i class="bi bi-inbox display-5 d-block mb-2"></i>ไม่พบข้อมูล
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Pagination -->
+{% if total_pages > 1 %}
+<nav class="mt-3 d-flex justify-content-center">
+  <ul class="pagination pagination-sm">
+    <li class="page-item {% if page == 1 %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('view', bank=bank, date_from=date_from, date_to=date_to, page=page-1) }}">
+        &laquo;
+      </a>
+    </li>
+    {% for p in range([1, page-2]|max, [total_pages+1, page+3]|min) %}
+    <li class="page-item {% if p == page %}active{% endif %}">
+      <a class="page-link" href="{{ url_for('view', bank=bank, date_from=date_from, date_to=date_to, page=p) }}">{{ p }}</a>
+    </li>
+    {% endfor %}
+    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+      <a class="page-link" href="{{ url_for('view', bank=bank, date_from=date_from, date_to=date_to, page=page+1) }}">
+        &raquo;
+      </a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+
+<!-- Summary Footer -->
+{% if transactions %}
+<div class="card shadow-sm border-0 mt-3">
+  <div class="card-body py-2">
+    <div class="row text-center">
+      <div class="col">
+        <div class="small text-muted">รายการทั้งหมดในตาราง</div>
+        <div class="fw-bold">{{ transactions|length }}</div>
+      </div>
+      <div class="col border-start">
+        <div class="small text-muted">รวมรับเข้า (฿)</div>
+        <div class="fw-bold text-success">
+          {{ '{:,.2f}'.format(transactions | selectattr('credit') | sum(attribute='credit')) }}
+        </div>
+      </div>
+      <div class="col border-start">
+        <div class="small text-muted">รวมโอนออก (฿)</div>
+        <div class="fw-bold text-danger">
+          {{ '{:,.2f}'.format(transactions | selectattr('debit') | sum(attribute='debit')) }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Quick filter in table (client-side)
+const table = document.getElementById('txTable');
+</script>
+{% endblock %}
