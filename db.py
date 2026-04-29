@@ -46,21 +46,29 @@ def init_db():
     except Exception:
         pass  # column already exists
 
-    # Migrate: add unique index — first remove existing duplicates if any
+    # Migrate: rebuild unique index WITHOUT source_file so same transaction
+    # from monthly + merged files is stored only once.
     try:
-        # Keep only the first occurrence of each duplicate set
+        # Drop old index that included source_file
+        conn.execute('DROP INDEX IF EXISTS idx_tx_unique')
+        conn.commit()
+    except Exception:
+        pass
+
+    try:
+        # Remove duplicates keeping the row with the smallest id
         conn.execute('''
             DELETE FROM transactions
             WHERE id NOT IN (
                 SELECT MIN(id)
                 FROM transactions
-                GROUP BY bank, date, time, description, debit, credit, balance, source_file
+                GROUP BY bank, date, time, description, debit, credit, balance
             )
         ''')
         conn.commit()
         conn.execute('''
             CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_unique
-            ON transactions(bank, date, time, description, debit, credit, balance, source_file)
+            ON transactions(bank, date, time, description, debit, credit, balance)
         ''')
         conn.commit()
     except Exception:
