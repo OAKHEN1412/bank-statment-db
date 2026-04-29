@@ -45,35 +45,71 @@ def init_db():
         conn.commit()
     except Exception:
         pass  # column already exists
+
+    # Migrate: add unique index — first remove existing duplicates if any
+    try:
+        # Keep only the first occurrence of each duplicate set
+        conn.execute('''
+            DELETE FROM transactions
+            WHERE id NOT IN (
+                SELECT MIN(id)
+                FROM transactions
+                GROUP BY bank, date, time, description, debit, credit, balance, source_file
+            )
+        ''')
+        conn.commit()
+        conn.execute('''
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_tx_unique
+            ON transactions(bank, date, time, description, debit, credit, balance, source_file)
+        ''')
+        conn.commit()
+    except Exception:
+        pass  # index already exists
     conn.close()
+
+
+def file_already_imported(bank, filename):
+    """Return True if this filename was already imported for this bank."""
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT id FROM import_logs WHERE bank=? AND filename=? AND status='success' LIMIT 1",
+        (bank, filename)
+    ).fetchone()
+    conn.close()
+    return row is not None
 
 
 def save_transactions(bank, rows, filename):
     conn = get_conn()
     cur = conn.cursor()
     count = 0
+    skipped = 0
     for r in rows:
-        cur.execute('''
-            INSERT INTO transactions (bank, date, time, description, debit, credit, balance, source_file)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            bank,
-            r.get('date', ''),
-            r.get('time', ''),
-            r.get('description', ''),
-            r.get('debit', 0) or 0,
-            r.get('credit', 0) or 0,
-            r.get('balance'),
-            filename,
-        ))
-        count += 1
+        try:
+            cur.execute('''
+                INSERT INTO transactions (bank, date, time, description, debit, credit, balance, source_file)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                bank,
+                r.get('date', ''),
+                r.get('time', ''),
+                r.get('description', ''),
+                r.get('debit', 0) or 0,
+                r.get('credit', 0) or 0,
+                r.get('balance'),
+                filename,
+            ))
+            count += 1
+        except sqlite3.IntegrityError:
+            # Duplicate row — skip silently
+            skipped += 1
     cur.execute('''
         INSERT INTO import_logs (bank, filename, row_count, status, message)
-        VALUES (?, ?, ?, 'success', '')
-    ''', (bank, filename, count))
+        VALUES (?, ?, ?, 'success', ?)
+    ''', (bank, filename, count, f'ข้ามรายการซ้ำ {skipped} รายการ' if skipped else ''))
     conn.commit()
     conn.close()
-    return count
+    return count, skipped
 
 
 def get_transactions(bank='', date_from='', date_to='', page=1, per_page=200):

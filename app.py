@@ -5,7 +5,7 @@ from flask import (Flask, render_template, request, redirect,
                    url_for, flash, jsonify, send_file)
 import io
 
-from db import init_db, save_transactions, get_transactions, get_banks, get_summary, get_import_logs, delete_bank, delete_file
+from db import init_db, save_transactions, file_already_imported, get_transactions, get_banks, get_summary, get_import_logs, delete_bank, delete_file
 from parsers import parse_pdf
 from checker import process_excel, export_excel
 from updater import check_for_update, apply_update, get_config as get_update_config, save_config as save_update_config, update_version_number
@@ -65,11 +65,22 @@ def upload():
         f.save(tmp_path)
         original_name = f.filename
         try:
+            # Check duplicate file
+            if file_already_imported(bank, original_name):
+                flash(
+                    f'ข้ามไฟล์ "{original_name}" — เคย import แล้ว '
+                    f'(ถ้าต้องการ import ใหม่ ให้ลบไฟล์เดิมออกก่อน)',
+                    'warning'
+                )
+                continue
+
             rows = parse_pdf(bank, tmp_path)
             if rows:
-                count = save_transactions(bank, rows, original_name)
+                count, skipped = save_transactions(bank, rows, original_name)
                 total_rows += count
                 ok_count += 1
+                if skipped:
+                    flash(f'"{original_name}": บันทึก {count:,} รายการ (ข้ามซ้ำ {skipped:,} รายการ)', 'info')
             else:
                 flash(
                     f'ไม่พบรายการในไฟล์ "{original_name}" '
