@@ -8,9 +8,9 @@ echo.
 REM -- Find Python
 set PYEXE=
 py --version >nul 2>&1
-if not errorlevel 1 ( set PYEXE=py & goto :CHECK_DEPS )
+if not errorlevel 1 ( set PYEXE=py& goto :CHECK_DEPS )
 python --version >nul 2>&1
-if not errorlevel 1 ( set PYEXE=python & goto :CHECK_DEPS )
+if not errorlevel 1 ( set PYEXE=python& goto :CHECK_DEPS )
 
 if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set PYEXE=%LOCALAPPDATA%\Programs\Python\Python312\python.exe
 if exist "%LOCALAPPDATA%\Programs\Python\Python311\python.exe" set PYEXE=%LOCALAPPDATA%\Programs\Python\Python311\python.exe

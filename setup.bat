@@ -8,9 +8,9 @@ echo.
 REM -- Check Python
 set PYEXE=
 py --version >nul 2>&1
-if not errorlevel 1 ( set PYEXE=py & goto :HAVE_PYTHON )
+if not errorlevel 1 ( set PYEXE=py& goto :HAVE_PYTHON )
 python --version >nul 2>&1
-if not errorlevel 1 ( set PYEXE=python & goto :HAVE_PYTHON )
+if not errorlevel 1 ( set PYEXE=python& goto :HAVE_PYTHON )
 
 REM -- Python not found, download and install automatically
 echo Python not found. Downloading Python 3.12.10...
